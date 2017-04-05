@@ -1,0 +1,854 @@
+﻿<!doctype html>
+<html lang="de-de">
+<head>
+    <meta charset="UTF-8">
+    <title>TH Köln | CG-Learning | Shadow-Mapping</title>
+
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:400,300,700,500|Roboto+Condensed:400,300,700'
+          rel='stylesheet' type='text/css'>
+    <link href="css/css.css" rel="stylesheet"/>
+    <link href="js/jquery-ui-1_12_1/jquery-ui.css" rel="stylesheet">
+    <script src="js/jquery-3.1.1.min.js"></script>
+
+    <script src="js/three.min.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/ShadowMapViewer.js"></script>
+    <script src="js/UnpackDepthRGBAShader.js"></script>
+
+    <script src="js/app.js"></script>
+    <script src="js/AbstractShape.js"></script>
+    <script src="js/GeometricalShape.js"></script>
+    <script src="js/CustomShape.js"></script>
+    <script src="js/SpotLight.js"></script>
+    <!-- Loaders
+    <script src="js/FileLoader.js"></script>
+    <script src="js/JSONLoader.js"></script>
+    <script src="js/ObjectLoader.js"></script>
+    <script src="js/OBJLoader.js"></script>
+    -->
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/DragControls.js"></script>
+    <script src="js/TrackballControls.js"></script>
+
+    <script>
+        var app;
+        $(document).ready(function () {
+            app = new App(document.getElementById("canvas--container"));
+            console.log("App created");
+            createTab("Spotlight");
+            createTab("Basic");
+            $( "#tabs" ).tabs({ active: 0 });           //Set Spotlight Tab on active
+            for (var i = 0; i <= app.targets.length; i++) {
+                if (app.targets == 'undefined') {
+                    console.log("undefined found")
+                }
+                ;
+
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+<div class="wrapper">
+    <header>
+        <img src="images/logo_THKoeln.png" alt="Logo der TH Köln"/>
+        <h1>
+            CG - Learning<br/>
+            <span>Shadow-Mapping</span>
+        </h1>
+    </header>
+
+    <main>
+        <div id="canvas--container"></div>
+        <div id="toolbar">
+            <button id="button3" onclick="createTab('Spotlight')" class="ui-button ui-corner-all ui-widget">Add Spotlight</button>
+            <div>
+                <select id="geometry">
+                    <option value="Box" selected>Cube</option>
+                    <option value="Triangle">Pyramide</option>
+                    <option value="Sphere">Sphere</option>
+                </select>
+                <button id="button4" onclick="createTab('Basic')" class="ui-button ui-corner-all ui-widget">Add Geometry</button>
+            </div>
+            <div>
+                <select value="obj/monster.js" id="custom">
+                    <option value="obj/ship/star-trek-sovereign-class-ussgeblendert.json">Spaceship</option>
+                    <option value="obj/tank/german-panzer-ww2-ausf-b.json">Tank</option>
+                    <option value="obj/train/steam-train.json">Train</option>
+                </select>
+                <button id="button5" onclick="createTab('Custom')" class="ui-button ui-corner-all ui-widget">Add Custom</button>
+            </div>
+
+            <button id="button1" onclick="app.toggleAllLights()" class="ui-button ui-corner-all ui-widget">Toggle All Lights</button>
+            <button id="button2" onclick="app.toggleAllHelpers()" class="ui-button ui-corner-all ui-widget">Toggle All Helpers</button>
+        </div>
+        <div id="tabs">
+            <ul>
+            </ul>
+        </div>
+
+        <div id="templates" style="display:none"> <!-- Tab Templates -->
+            <div id="Basic_template">
+                <div class="group">
+
+                    <div class="half">
+
+                        <div class="title">Geometry</div>
+
+                        <label for="colorPicker">Material Color</label>
+                        <input type="color" onchange="app.currentTarget.setColHex(this.value)" id="colorPickerObject" class="colorPicker" value="#FF5900">
+
+                        <label for="colorPicker">Specular Color</label>
+                        <input type="color" onchange="app.currentTarget.setSpecHex(this.value)" id="colorPickerObjectSpecular" class="colorPicker" value="#FF5900">
+
+                        <input type="checkbox" onchange="app.currentTarget.changeWireFrame()" id="wireFrame" class="toggleCheckbox">
+                        <label for="wireFrame" class="margintop">Toggle Wireframe</label>
+
+                        <input type="checkbox" onchange="app.changeTarget(this)" id="target" class="toggleCheckbox">
+                        <label for="target">Focus Spotlights</label>
+
+                    </div>
+
+                    <div class="half">
+
+                        <div class="title">Position</div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the X-Coordinate of the selected object
+                                </div>
+                            </div>
+                            <label for="posX">X</label>
+                            <input id="posX" oninput="app.currentTarget.setXPos(this.value)" type="range" min="-16" max="16" value="0"
+                                   step=".5"/>
+                            <div class="values">
+                                <span>-16</span><span id="posXValue">0</span><span>16</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Y-Coordinate of the selected object
+                                </div>
+                            </div>
+                            <label for="posY">Y</label>
+                            <input id="posY" oninput="app.currentTarget.setYPos(this.value)" type="range" min="-0" max="32" value="0"
+                                   step=".5"/>
+                            <div class="values">
+                                <span>0</span><span id="posYValue">0</span><span>32</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Z-Coordinate of the selected object
+                                </div>
+                            </div>
+                            <label for="posZ">Z</label>
+                            <input id="posZ" oninput="app.currentTarget.setZPos(this.value)" type="range" min="-16" max="16" value="0"
+                                   step=".5"/>
+                            <div class="values">
+                                <span>-16</span><span id="posZValue">0</span><span>16</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+
+                        <div class="title">Size</div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the X-Size of the selected object
+                                </div>
+                            </div>
+                            <label for="scaleX">X</label>
+                            <input id="scaleX" oninput="app.currentTarget.setXScale(this.value)" type="range" min=".1" max="5" value="1"
+                                   step=".1"/>
+                            <div class="values">
+                                <span>0.1</span><span id="scaleXValue">1</span><span>5</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the Y-Size of the selected object
+                                </div>
+                            </div>
+                            <label for="scaleY">Y</label>
+                            <input id="scaleY" oninput="app.currentTarget.setYScale(this.value)" type="range" min=".1" max="5" value="1"
+                                   step=".1"/>
+                            <div class="values">
+                                <span>0.1</span><span id="scaleYValue">1</span><span>5</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the Z-Size of the selected object
+                                </div>
+                            </div>
+                            <label for="scaleZ">Z</label>
+                            <input id="scaleZ" oninput="app.currentTarget.setZScale(this.value)" type="range" min=".1" max="5" value="1"
+                                   step=".1"/>
+                            <div class="values">
+                                <span>0.1</span><span id="scaleZValue">1</span><span>5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+
+                        <div class="title">Rotate</div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected object in X-Axis
+                                </div>
+                            </div>
+                            <label for="rotateX">X</label>
+                            <input id="rotateX" oninput="app.currentTarget.setXRotation(this.value)" type="range" min="0" max="360"
+                                   value="0" step="1"/>
+                            <div class="values">
+                                <span>0</span><span id="rotateXValue">0</span><span>360</span>
+                            </div>
+                        </div>
+
+                        <input type="checkbox" onchange="app.currentTarget.toggleXRotation()" id="toggleRotationX" class="toggleCheckbox">
+                        <label for="toggleRotationX">Toggle X Rotation</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected object in Y-Axis
+                                </div>
+                            </div>
+                            <label for="rotateY">Y</label>
+                            <input id="rotateY" oninput="app.currentTarget.setYRotation(this.value)" type="range" min="0" max="360"
+                                   value="0" step="1"/>
+                            <div class="values">
+                                <span>0</span><span id="rotateYValue">0</span><span>360</span>
+                            </div>
+                        </div>
+
+                        <input type="checkbox" onchange="app.currentTarget.toggleYRotation()" id="toggleRotationY" class="toggleCheckbox">
+                        <label for="toggleRotationY">Toggle Y Rotation</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected object in Z-Axis
+                                </div>
+                            </div>
+                            <label for="rotateZ">Z</label>
+                            <input id="rotateZ" oninput="app.currentTarget.setZRotation(this.value)" type="range" min="0" max="360"
+                                   value="0" step="1"/>
+                            <div class="values">
+                                <span>0</span><span id="rotateZValue">0</span><span>360</span>
+                            </div>
+                        </div>
+
+                        <input type="checkbox" onchange="app.currentTarget.toggleZRotation()" id="toggleRotationZ" class="toggleCheckbox">
+                        <label for="toggleRotationZ">Toggle Z Rotation</label>
+
+                    </div>
+
+                    <div class="half">
+
+                        <div class="title">PolygonOffset</div>
+
+                        <input type="checkbox" onchange="app.currentTarget.setPolygonOffSet()" id="togglePolygonOffset" class="toggleCheckbox">
+                        <label for="togglePolygonOffset">Toggle Polygon Offset</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the factor of the polygon offset
+                                </div>
+                            </div>
+                            <label for="factor">Factor</label>
+                            <input id="factor" oninput="app.currentTarget.setFactor(this.value)" type="range" min="-5" max="5" value="1" step="1"/>
+                            <div class="values">
+                                <span>-5</span><span id="factorValue">1</span><span>5</span>
+                            </div>
+                        </div>
+
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the units of the polygon offset
+                                </div>
+                            </div>
+                            <label for="units">Units</label>
+                            <input id="units" oninput="app.currentTarget.setUnits(this.value)" type="range" min="0" max="10" value="0.1" step="0.1"/>
+                            <div class="values">
+                                <span>0</span><span id="unitsValue">0.1</span><span>1</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="Custom_template">
+                <div class="group">
+
+                    <div class="half">
+                        <div class="title">CustomObject</div>
+                        <input type="checkbox" onchange="app.changeTarget(this)" id="targetcustom" class="toggleCheckbox">
+                        <label for="targetcustom">Focus Spotlights</label>
+                    </div>
+
+                    <div class="half">
+                        <div class="title">Position</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the X-Coordinate of the selected custom object
+                                </div>
+                            </div>
+                            <label for="customPosX">X</label>
+                            <input id="customPosX" oninput="app.currentTarget.setXPos(this.value)" type="range" min="-18" max="18" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-18</span><span id="customPosXValue">0</span><span>18</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Y-Coordinate of the selected custom object
+                                </div>
+                            </div>
+                            <label for="customPosY">Y</label>
+                            <input id="customPosY"  oninput="app.currentTarget.setYPos(this.value)" type="range" min="-2" max="36" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-2</span><span id="customPosYValue">0</span><span>36</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Z-Coordinate of the selected custom object
+                                </div>
+                            </div>
+                            <label for="customPosZ">Z</label>
+                            <input id="customPosZ" oninput="app.currentTarget.setZPos(this.value)"  type="range" min="-18" max="18" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-18</span><span id="customPosZValue">0</span><span>18</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+                        <div class="title">Size</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the X-Size of the selected custom object
+                                </div>
+                            </div>
+                            <label for="scaleCustomX">X</label>
+                            <input id="scaleCustomX" oninput="app.currentTarget.setXScale(this.value)" type="range" min=".1" max="5" value="1" step=".1" />
+                            <div class="values">
+                                <span>0.1</span><span id="scaleCustomXValue">1</span><span>5</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the Y-Size of the selected custom object
+                                </div>
+                            </div>
+                            <label for="scaleCustomY">Y</label>
+                            <input id="scaleCustomY" oninput="app.currentTarget.setYScale(this.value)" type="range" min=".1" max="5" value="1" step=".1" />
+                            <div class="values">
+                                <span>0.1</span><span id="scaleCustomYValue">1</span><span>5</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Scale the Z-Size of the selected custom object
+                                </div>
+                            </div>
+                            <label for="scaleCustomZ">Z</label>
+                            <input id="scaleCustomZ" oninput="app.currentTarget.setZScale(this.value)" type="range" min=".1" max="5" value="1" step=".1" />
+                            <div class="values">
+                                <span>0.1</span><span id="scaleCustomZValue">1</span><span>5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+                        <div class="title">Rotation</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected custom object in X-Axis
+                                </div>
+                            </div>
+                            <label for="rotateCustomX">X</label>
+                            <input id="rotateCustomX" oninput="app.currentTarget.setXRotation(this.value)" type="range" min="0" max="360" value="0" step="1" />
+                            <div class="values">
+                                <span>0</span><span id="rotateCustomXValue">0</span><span>360</span>
+                            </div>
+                        </div>
+                        <input type="checkbox" onchange="app.currentTarget.toggleXRotation()" id="toggleCustomRotationX" class="toggleCheckbox">
+                        <label for="toggleCustomRotationX">Toggle X Rotation</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected custom object in Y-Axis
+                                </div>
+                            </div>
+                            <label for="rotateCustomY">Y</label>
+                            <input id="rotateCustomY" oninput="app.currentTarget.setYRotation(this.value)" type="range" min="0" max="360" value="0" step="1" />
+                            <div class="values">
+                                <span>0</span><span id="rotateCustomYValue">0</span><span>360</span>
+                            </div>
+                        </div>
+                        <input type="checkbox" onchange="app.currentTarget.toggleYRotation()" id="toggleCustomRotationY" class="toggleCheckbox">
+                        <label for="toggleCustomRotationY">Toggle Y Rotation</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Rotate the selected custom object in Z-Axis
+                                </div>
+                            </div>
+                            <label for="rotateCustomZ">Z</label>
+                            <input id="rotateCustomZ" oninput="app.currentTarget.setZRotation(this.value)" type="range" min="0" max="360" value="0" step="1" />
+                            <div class="values">
+                                <span>0</span><span id="rotateCustomZValue">0</span><span>360</span>
+                            </div>
+                        </div>
+                        <input type="checkbox" onchange="app.currentTarget.toggleZRotation()" id="toggleCustomRotationZ" class="toggleCheckbox">
+                        <label for="toggleCustomRotationZ">Toggle Z Rotation</label>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="Spotlight_template">
+                <div class="group">
+
+                    <div class="half">
+                        <div class="title">Spotlight</div>
+
+                        <label for="colorPicker">Light Color</label>
+                        <input type="color" onchange="app.currentTarget.setColHex(this.value)" id="colorPicker" class="colorPicker" value="#ffffff">
+
+                        <div class="radio_container margintop">
+                            <input type="checkbox" onclick="app.currentTarget.toggleLight()" id="toggleLight" class="toggleCheckbox" >
+                            <label for="toggleLight">Toggle Light</label>
+
+                            <input type="checkbox" onchange="app.currentTarget.toggleHelpers()" id="toggleHelpers" class="toggleCheckbox">
+                            <label for="toggleHelpers">Toggle Helpers</label>
+
+                            <input type="checkbox" onchange="app.currentTarget.setAutoMove()" id="moveLight" class="toggleCheckbox">
+                            <label for="moveLight">Automove Light</label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="half">
+                        <div class="title">Position</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the X-Coordinate of the selected spotlight
+                                </div>
+                            </div>
+                            <label for="spotPosX">X</label>
+                            <input id="spotPosX" oninput="app.currentTarget.setXPos(this.value),app.currentTarget.setIndicatorPosX(this.value)" type="range" min="-18" max="18" value="5" step=".5"/>
+                            <div class="values">
+                                <span>-18</span><span id="spotPosXValue">5</span><span>18</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Y-Coordinate of the selected spotlight
+                                </div>
+                            </div>
+                            <label for="spotPosY">Y</label>
+                            <input id="spotPosY" oninput="app.currentTarget.setYPos(this.value),app.currentTarget.setIndicatorPosY(this.value)" type="range" min="-2" max="34" value="5" step=".5"/>
+                            <div class="values">
+                                <span>-2</span><span id="spotPosYValue">5</span><span>34</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the Z-Coordinate of the selected spotlight
+                                </div>
+                            </div>
+                            <label for="spotPosZ">Z</label>
+                            <input id="spotPosZ" oninput="app.currentTarget.setZPos(this.value),app.currentTarget.setIndicatorPosZ(this.value)" type="range" min="-18" max="18" value="-5" step=".5"/>
+                            <div class="values">
+                                <span>-18</span><span id="spotPosZValue">-5</span><span>18</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+                        <div class="title">LookAt</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Move the X-Coordinate of the Spotlights Target
+                                </div>
+                            </div>
+                            <label for="LookAtXPosX">X</label>
+                            <input id="LookAtXPosX" oninput="app.currentTarget.xTarget(this.value)" type="range" min="-10" max="10" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-10</span><span id="LookAtXPosXValue">0</span><span>10</span>
+                            </div>
+                        </div>
+
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Move the Y-Coordinate of the Spotlights Target
+                                </div>
+                            </div>
+                            <label for="LookAtYPosY">Y</label>
+                            <input id="LookAtYPosY" oninput="app.currentTarget.yTarget(this.value)" type="range" min="-10" max="10" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-10</span><span id="LookAtYPosYValue">0</span><span>10</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Move the Z-Coordinate of the Spotlights Target
+                                </div>
+                            </div>
+                            <label for="LookAtZPosZ">Z</label>
+                            <input id="LookAtZPosZ" oninput="app.currentTarget.zTarget(this.value)" type="range" min="-10" max="10" value="0" step=".5"/>
+                            <div class="values">
+                                <span>-10</span><span id="LookAtZPosZValue">0</span><span>10</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half">
+                        <div class="title">Properties</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the numeric value of the light's strength/<strong>INTENSITY</strong>
+                                </div>
+                            </div>
+                            <label for="intensity">Intensity</label>
+                            <input id="intensity" oninput="app.currentTarget.setIntensity(this.value)" type="range" min="0" max="30" value="3" step="0.1"/>
+                            <div class="values">
+                                <span>0</span><span id="intensityValue">3</span><span>30</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the maximum <strong>DISTANCE</strong> from origin where light will shine whose intensity is attenuated linearly based on distance from origin ( 0 = infinity )
+                                </div>
+                            </div>
+                            <label for="distance">Attenuation</label>
+                            <input id="distance" oninput="app.currentTarget.setDistance(this.value)" type="range" min="0" max="30" value="0" step="1"/>
+                            <div class="values">
+                                <span>0</span><span id="distanceValue">0</span><span>30</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the maximum <strong>ANGLE</strong> of light dispersion from its direction
+                                </div>
+                            </div>
+                            <label for="angle">Opening Angle</label>
+                            <input id="angle" oninput="app.currentTarget.setAngle(this.value)" type="range" min="0" max="90" value="60" step="1"/>
+                            <div class="values">
+                                <span>0</span><span id="angleValue">60</span><span>90</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the percent of the spotlight cone that is attenuated due to <strong>PENUMBRA</strong>
+                                </div>
+                            </div>
+                            <label for="penumbra">Fall off</label>
+                            <input id="penumbra" oninput="app.currentTarget.setPenumbra(this.value)" type="range" min="0" max="1" value=".2" step="0.05"/>
+                            <div class="values">
+                                <span>0</span><span id="penumbraValue">0.2</span><span>1</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="half">
+                        <div class="title">Shadow</div>
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the offset of the shadows position
+                                </div>
+                            </div>
+                            <label for="bias">Bias</label>
+                            <input id="bias" oninput="app.currentTarget.setBias(this.value)" type="range" min="-0.1" max="0.1" value="0" step=".0001"/>
+                            <div class="values">
+                                <span>-0.1</span><span id="biasValue">0</span><span>0.1</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the minimum distance where objectives cast shadows
+                                </div>
+                            </div>
+                            <label for="near">Near</label>
+                            <input id="near" oninput="app.currentTarget.setNear(this.value)" type="range" min="1" max="40" value="1" step=".5"/>
+                            <div class="values">
+                                <span>1</span><span id="nearValue">1</span><span>40</span>
+                            </div>
+                        </div>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the maximum distance where objectives cast shadows
+                                </div>
+                            </div>
+                            <label for="far">Far</label>
+                            <input id="far" oninput="app.currentTarget.setFar(this.value)" type="range" min="0" max="20" value="20" step=".5"/>
+                            <div class="values">
+                                <span>0</span><span id="farValue">20</span><span>20</span>
+                            </div>
+                        </div>
+
+                        <input type="checkbox" onchange="app.toggleShadowMap(this)" id="toggleShadowViewer" class="toggleCheckbox" >
+                        <label for="toggleShadowViewer">Toggle ShadowMap View</label>
+
+                        <div class="inputWrapper">
+                            <div class="tooltip">
+                                <div class="tooltipButton">
+                                </div>
+                                <div class="tooltipContent">
+                                    Set the resolution of the shadow map
+                                </div>
+                            </div>
+                            <label for="selectShadowMapSize" class="margintop">Shadowmap Size</label>
+                            <select id="selectShadowMapSize" onchange="app.currentTarget.setShadowMapSize(this.options[this.selectedIndex].value)">
+                                <option value="64">64*64</option>
+                                <option value="128">128*128</option>
+                                <option value="256">256*256</option>
+                                <option value="512">512*512</option>
+                                <option value="1024" selected>1024*1024</option>
+                                <option value="2048">2048*2048</option>
+                                <option value="4096">4096*4096</option>
+                                <option value="8192">8192*8192</option>
+                                <option value="16384">16384*16384</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <script src="js/jquery-ui-1_12_1/external/jquery/jquery.js"></script>
+        <script src="js/jquery-ui-1_12_1/jquery-ui.js"></script>
+    </main>
+
+    <footer>
+        Author: Danny Kürten, René Schneider, Daniel Ciesla
+    </footer>
+</div>
+
+<script>
+    var tab_Type = $("#tab_type"),
+        tabTemplate = "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close' role='presentation'>Remove Tab</span></li>",
+        tabCounter = 0;
+
+    var tabs = $("#tabs").tabs();
+
+    $('#tabs').on('tabsactivate', function (event, ui) {
+        app.currentTarget = app.targets[ui.newTab.index()];
+        //verhindert dass spotLight functionen auf andere objekte aufgerufen werden.
+        if(app.currentTarget.threeobject != null) {
+            if (app.currentTarget.threeobject.type != "SpotLight") {
+                $('#moveLight').attr('checked', false);
+            }
+        }
+    });
+
+    function addTab() {
+        createTab(tab_Type.val());
+    }
+
+    var geometryCount = 1,
+        customCount = 1,
+        spotlightCount = 1;
+
+    // Actual addTab function: adds new tab using the input from the form above
+    function createTab(objectType) {
+        var label;
+        var name = $("#object_name");
+        var element;
+        if (objectType == "Basic")
+        {
+            var type = $("#geometry");
+            element = new GeometricalShape(type[0].value);
+            label = 'Geometry ' + geometryCount;
+            geometryCount++;
+        }
+        else if (objectType == "Custom")
+        {
+            var type = $("#custom");
+            element = new CustomShape(type.val(), app.scene);// Sonderfall, da das Objekt erst später hinzugefügt wird
+            label = 'Custom ' + customCount;
+            customCount++;
+        }
+        else if (objectType == "Spotlight")
+        {
+            element = new SpotLight();
+            label = 'Spotlight ' + spotlightCount;
+            spotlightCount++;
+        }
+        else return;
+        app.addObject(element);
+        var id = "tabs-" + tabCounter,
+            li = $(tabTemplate.replace(/#\{href\}/g, "#" + id).replace(/#\{label\}/g, label))
+
+
+        var templates = document.querySelector('#templates');
+        var template = document.querySelector('#' + objectType + '_template');
+        var templateClone = template.cloneNode(true);
+        var ids = templateClone.querySelectorAll('[id], [for]');
+        ids.forEach(function(id) {
+            if(id.id) {
+                id.id = id.id + tabCounter;
+            }
+            if(id.getAttribute('for')) {
+                id.setAttribute('for', id.getAttribute('for') + tabCounter);
+            }
+        });
+
+
+        var inputs = templateClone.querySelectorAll('input[type="range"]');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                var values = this.nextSibling.nextSibling;
+                values.querySelector('[id]').innerHTML = this.value;
+            });
+        });
+
+        tabs.find(".ui-tabs-nav").append(li);
+        templateClone.id = id;
+        tabs.append(templateClone);
+        tabs.tabs("refresh");
+        var tabCount = $('#tabs >ul >li').length;
+        $( "#tabs" ).tabs({ active: tabCount-1 });
+        tabCounter++;
+    }
+
+    // Close icon: removing the tab on click
+    tabs.on("click", "span.ui-icon-close", function () {
+        var panelId = $(this).closest("li").remove().attr("aria-controls");
+        app.removeObject(app.targets[$("#" + panelId).index() - 1]);
+        $("#" + panelId).remove();
+        tabs.tabs("refresh");
+    });
+
+</script>
+
+</body>
+</html>
